@@ -1,0 +1,15 @@
+# 알림 임계값 설정
+alerts:
+  daily_change_threshold_pct: 5.0        # 전일 종가 대비 급등락 기준 (%)
+  short_change_threshold_pct: 3.0        # 단기 급변 기준 (%)
+  short_change_interval_minutes: 5       # 단기 변동 기준 시간 (분) - 5 또는 15
+  cooldown_minutes: 10                   # 동일 종목 중복 알림 방지 시간 (분)
+
+# 경고 임계값
+thresholds:
+  vix_warning: 25.0                      # VIX 경고 기준
+  yield_spread_warning: 1.5              # 미/한 국채금리차 경고 기준 (%p)
+  foreign_selling_warning_trillion: 1.0  # 외국인 순매도 경고 기준 (조원)
+  foreign_selling_consecutive_days: 3   # 연속 매도 기준 일수
+
+timezone: "Asia/Seoul"

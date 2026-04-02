@@ -1,0 +1,61 @@
+stocks:
+  # 한국 주식 (KOSPI)
+  - name: "삼성전자"
+    ticker: "005930"
+    market: "KOSPI"
+
+  - name: "SK하이닉스"
+    ticker: "000660"
+    market: "KOSPI"
+
+  - name: "현대차"
+    ticker: "005380"
+    market: "KOSPI"
+
+  - name: "NAVER"
+    ticker: "035420"
+    market: "KOSPI"
+
+  - name: "카카오"
+    ticker: "035720"
+    market: "KOSDAQ"
+  # 한국 주식 (KOSDAQ)
+
+  # 한국 ETF (KOSPI)
+  - name: "KODEX 200"
+    ticker: "069500"
+    market: "KOSPI"
+
+  - name: "TIGER 미국S&P500"
+    ticker: "360750"
+    market: "KOSPI"
+
+  # 미국 주식
+  - name: "Apple"
+    ticker: "AAPL"
+    market: "US"
+
+  - name: "NVIDIA"
+    ticker: "NVDA"
+    market: "US"
+
+  - name: "Tesla"
+    ticker: "TSLA"
+    market: "US"
+
+  - name: "Microsoft"
+    ticker: "MSFT"
+    market: "US"
+
+  # 미국 ETF
+  - name: "S&P500 ETF"
+    ticker: "SPY"
+    market: "US"
+
+  - name: "QQQ NASDAQ ETF"
+    ticker: "QQQ"
+    market: "US"
+
+  - name: "SOXL 반도체 3x ETF"
+    ticker: "SOXL"
+    market: "US"

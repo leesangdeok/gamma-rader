@@ -1,0 +1,24 @@
+name: Morning Report (오전 시황 브리핑)
+on:
+  schedule:
+    - cron: '50 22 * * 1-5'  # 22:50 UTC = 07:50 KST (Mon-Fri)
+  workflow_dispatch:
+
+jobs:
+  morning-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run morning report
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python src/jobs/morning_report.py

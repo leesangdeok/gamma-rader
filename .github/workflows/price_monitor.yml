@@ -1,0 +1,34 @@
+name: Price Monitor (주가 급등락 모니터링)
+on:
+  schedule:
+    # Korean market hours: KST 09:00-15:30 = UTC 00:00-06:30
+    - cron: '*/5 0-6 * * 1-5'
+    # US market hours: EST 09:30-16:00 = UTC 14:30-21:00
+    - cron: '*/5 14-21 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  price-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Restore alert state cache
+        uses: actions/cache@v4
+        with:
+          path: .state/
+          key: alert-state-${{ github.run_id }}
+          restore-keys: |
+            alert-state-
+      - name: Run price monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python src/jobs/price_monitor.py

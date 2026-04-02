@@ -1,0 +1,25 @@
+name: Market Summary (시장 시황)
+on:
+  schedule:
+    - cron: '0 1 * * 1-5'   # 01:00 UTC = 10:00 KST (Mon-Fri)
+    - cron: '0 8 * * 1-5'   # 08:00 UTC = 17:00 KST (Mon-Fri)
+  workflow_dispatch:
+
+jobs:
+  market-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run market summary
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python src/jobs/market_summary.py
