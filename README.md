@@ -12,6 +12,7 @@ Python 기반 주식 및 금융 정보 자동 알림 서비스입니다. GitHub 
 - **VIX 공포지수**: 25 이상 시 경고 알림
 - **외국인 순매도 현황**: KOSPI 외국인 연속 순매도 일수 및 총액 (1조원 이상 경고)
 - **미/한 국채 금리 스프레드**: 미국·한국 10년물 국채 금리차 (1.5%p 이상 경고)
+- **KOSPI 야간선물 지수**: 지수 대비 등락률
 
 ### 2. 시장 시황 요약 (10:00 KST / 17:00 KST)
 - **오전 10시**: 한국 시장 개장 후 주요 지수 및 AI 시황 분석
@@ -96,6 +97,8 @@ GitHub 저장소의 **Settings > Secrets and variables > Actions** 에서 다음
 | `TELEGRAM_BOT_TOKEN` | Telegram 봇 토큰 | [@BotFather](https://t.me/BotFather)에서 봇 생성 후 토큰 발급 |
 | `TELEGRAM_CHAT_ID` | 알림 받을 채팅 ID | [@userinfobot](https://t.me/userinfobot)에서 자신의 Chat ID 확인 |
 | `GEMINI_API_KEY` | Google Gemini API 키 | [Google AI Studio](https://aistudio.google.com/)에서 발급 |
+| `KIS_APP_KEY` | 한국투자증권 앱 키 | [KIS Developers](https://apiportal.koreainvestment.com/)에서 앱 등록 후 발급 |
+| `KIS_APP_SECRET` | 한국투자증권 앱 시크릿 | KIS Developers 앱 등록 시 함께 발급 |
 
 #### Telegram Bot 설정 방법
 1. Telegram에서 `@BotFather` 검색
@@ -109,6 +112,13 @@ GitHub 저장소의 **Settings > Secrets and variables > Actions** 에서 다음
 1. [Google AI Studio](https://aistudio.google.com/) 접속
 2. "Get API Key" 클릭
 3. 발급된 API 키를 `GEMINI_API_KEY`에 저장
+
+#### KIS Developers API 설정 방법
+1. [KIS Developers](https://apiportal.koreainvestment.com/) 접속 후 로그인
+2. **앱 등록** → 서비스 유형 선택 (실전투자 또는 모의투자)
+3. 등록된 앱의 **앱 키(App Key)** 를 `KIS_APP_KEY`에 저장
+4. **앱 시크릿(App Secret)** 을 `KIS_APP_SECRET`에 저장
+5. 모의투자 서버를 사용하려면 `KIS_MOCK=1` 환경변수 추가 (기본값: 실전)
 
 ---
 
@@ -198,7 +208,11 @@ pip install -r requirements.txt
 export TELEGRAM_BOT_TOKEN="your_bot_token_here"
 export TELEGRAM_CHAT_ID="your_chat_id_here"
 export GEMINI_API_KEY="your_gemini_api_key_here"
+export KIS_APP_KEY="your_kis_app_key_here"
+export KIS_APP_SECRET="your_kis_app_secret_here"
+# export KIS_MOCK=1  # 모의투자 서버 사용 시 활성화
 export PYTHONPATH=$(pwd)
+export TELEGRAM_ENABLED=false # false=콘솔로그, true=텔레그렘 알림
 ```
 
 ### 각 스크립트 실행
@@ -253,11 +267,7 @@ print('Indices:', get_market_indices())
 | 알림 | Telegram Bot API |
 | AI 분석 | Google Gemini 2.0 Flash |
 | 주식 데이터 | yfinance (미국/글로벌) |
-| 한국 주식 데이터 | pykrx |
+| 한국 시장 데이터 | KIS Developers API (야간선물, 외국인 매매동향), pykrx (국채 금리 fallback) |
 | 뉴스 | Google News RSS (feedparser) |
 
 ---
-
-## 라이선스
-
-MIT License

@@ -1,4 +1,6 @@
 import logging
+import os
+import re
 import sys
 from datetime import datetime
 
@@ -34,12 +36,15 @@ def format_index_line(name: str, data: dict) -> str:
     return f"  {name}: {price:,.2f} {arrow} {change_pct:+.2f}%"
 
 
+def _is_telegram_enabled() -> bool:
+    return os.environ.get("TELEGRAM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+
+
 def main():
     """시장 시황 요약을 생성하고 Telegram으로 전송합니다."""
     from src.analyzers.gemini_analyzer import generate_market_summary
     from src.collectors.market_data import get_market_indices
     from src.collectors.news import search_google_news
-    from src.notifiers.telegram_notifier import send_message
 
     now_kst = datetime.now(KST)
     hour = now_kst.hour
@@ -94,8 +99,16 @@ def main():
             lines.append(format_index_line(name, indices[name]))
 
     message = "\n".join(lines)
+    logger.info("시황 요약 메시지 생성 완료")
 
-    logger.info("시황 요약 메시지 생성 완료, Telegram 전송 중...")
+    if not _is_telegram_enabled():
+        plain = re.sub(r"<[^>]+>", "", message)
+        print("\n" + plain)
+        return
+
+    from src.notifiers.telegram_notifier import send_message
+
+    logger.info("Telegram 전송 중...")
     success = send_message(message)
 
     if success:

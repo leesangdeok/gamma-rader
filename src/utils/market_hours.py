@@ -46,11 +46,29 @@ def is_us_market_open() -> bool:
     return market_open <= now_est <= market_close
 
 
+def is_nxt_market_open() -> bool:
+    """
+    넥스트트레이드(NXT) 운영 여부를 확인합니다.
+    장전: KST 08:00~08:50, 정규: 09:00~15:30, 장후: 15:30~20:00 (월~금)
+
+    Returns:
+        bool: NXT 운영 여부
+    """
+    now_kst = datetime.now(KST)
+    if now_kst.weekday() >= 5:
+        return False
+
+    market_open = now_kst.replace(hour=8, minute=0, second=0, microsecond=0)
+    market_close = now_kst.replace(hour=20, minute=0, second=0, microsecond=0)
+
+    return market_open <= now_kst <= market_close
+
+
 def is_any_market_open() -> bool:
     """
-    한국 또는 미국 시장 중 하나라도 개장 중인지 확인합니다.
+    한국(KRX/NXT) 또는 미국 시장 중 하나라도 개장 중인지 확인합니다.
 
     Returns:
         bool: 어느 시장이든 개장 여부
     """
-    return is_korean_market_open() or is_us_market_open()
+    return is_korean_market_open() or is_us_market_open() or is_nxt_market_open()

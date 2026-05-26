@@ -1,7 +1,12 @@
 import logging
+import os
+import re
 import sys
+from pathlib import Path
 
 import yaml
+
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +27,7 @@ def load_yaml(path: str) -> dict:
 
 def format_price(price: float, market: str) -> str:
     """시장에 맞는 가격 포맷을 반환합니다."""
-    if market in ("KOSPI", "KOSDAQ"):
+    if market in ("KOSPI", "KOSDAQ", "NXT_KOSPI", "NXT_KOSDAQ"):
         return f"{price:,.0f}원"
     else:
         return f"${price:,.2f}"
@@ -90,23 +95,26 @@ def build_short_term_alert_message(
     return "\n".join(lines)
 
 
+def _is_telegram_enabled() -> bool:
+    return os.environ.get("TELEGRAM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+
+
 def main():
     """주가 급등락 모니터링을 실행합니다."""
     from src.analyzers.gemini_analyzer import analyze_stock_movement
     from src.collectors.news import get_stock_news
     from src.collectors.stock_data import get_stock_prices
-    from src.notifiers.telegram_notifier import send_message
     from src.state.alert_state import AlertState
     from src.utils.market_hours import is_any_market_open
 
     # 장 운영 시간 확인
     if not is_any_market_open():
-        logger.info("장 마감 상태. 모니터링 종료.")
-        sys.exit(0)
+        logger.info("장 마감 상태. 모니터링 건너뜀.")
+        return
 
     # 설정 로드
-    settings = load_yaml("config/settings.yaml")
-    watchlist_config = load_yaml("config/watchlist.yaml")
+    settings = load_yaml(PROJECT_ROOT / "config/settings.yaml")
+    watchlist_config = load_yaml(PROJECT_ROOT / "config/watchlist.yaml")
 
     alerts_config = settings.get("alerts", {})
     daily_threshold = alerts_config.get("daily_change_threshold_pct", 5.0)
@@ -117,7 +125,7 @@ def main():
     watchlist = watchlist_config.get("stocks", [])
     if not watchlist:
         logger.warning("watchlist.yaml에 종목이 없습니다.")
-        sys.exit(0)
+        return
 
     # 알림 상태 로드
     state = AlertState()
@@ -174,13 +182,20 @@ def main():
                 news=news,
                 ai_analysis=ai_analysis,
             )
-            success = send_message(message)
-            if success:
+            if not _is_telegram_enabled():
+                plain = re.sub(r"<[^>]+>", "", message)
+                print("\n" + plain)
                 state.mark_five_pct_alert(yf_ticker)
                 state.mark_alert_sent(yf_ticker)
-                logger.info(f"일간 급등락 알림 전송 완료: {name}")
             else:
-                logger.error(f"일간 급등락 알림 전송 실패: {name}")
+                from src.notifiers.telegram_notifier import send_message
+                success = send_message(message)
+                if success:
+                    state.mark_five_pct_alert(yf_ticker)
+                    state.mark_alert_sent(yf_ticker)
+                    logger.info(f"일간 급등락 알림 전송 완료: {name}")
+                else:
+                    logger.error(f"일간 급등락 알림 전송 실패: {name}")
 
         # 2. 단기 급변 체크
         price_ago = state.get_price_n_minutes_ago(yf_ticker, interval_min)
@@ -201,12 +216,18 @@ def main():
                     short_change_pct=short_change_pct,
                     interval_min=interval_min,
                 )
-                success = send_message(message)
-                if success:
+                if not _is_telegram_enabled():
+                    plain = re.sub(r"<[^>]+>", "", message)
+                    print("\n" + plain)
                     state.mark_alert_sent(yf_ticker)
-                    logger.info(f"단기 급변 알림 전송 완료: {name}")
                 else:
-                    logger.error(f"단기 급변 알림 전송 실패: {name}")
+                    from src.notifiers.telegram_notifier import send_message
+                    success = send_message(message)
+                    if success:
+                        state.mark_alert_sent(yf_ticker)
+                        logger.info(f"단기 급변 알림 전송 완료: {name}")
+                    else:
+                        logger.error(f"단기 급변 알림 전송 실패: {name}")
 
     # 상태 저장
     state.save()

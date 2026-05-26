@@ -8,6 +8,7 @@ alerts:
 # 경고 임계값
 thresholds:
   vix_warning: 25.0                      # VIX 경고 기준
+  us_yield_warning: 4.6                 # 미국 10년물 금리 경고 기준 (%)
   yield_spread_warning: 1.5              # 미/한 국채금리차 경고 기준 (%p)
   foreign_selling_warning_trillion: 1.0  # 외국인 순매도 경고 기준 (조원)
   foreign_selling_consecutive_days: 3   # 연속 매도 기준 일수

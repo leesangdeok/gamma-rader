@@ -2,13 +2,15 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytz
 
 logger = logging.getLogger(__name__)
 
 KST = pytz.timezone("Asia/Seoul")
-STATE_FILE = ".state/alert_state.json"
+_STATE_DIR = Path(__file__).parent.parent.parent / ".state"
+STATE_FILE = _STATE_DIR / "alert_state.json"
 
 
 class AlertState:
@@ -18,7 +20,7 @@ class AlertState:
     """
 
     def __init__(self):
-        os.makedirs(".state", exist_ok=True)
+        _STATE_DIR.mkdir(exist_ok=True)
         self._state = self._load()
 
     def _load(self) -> dict:

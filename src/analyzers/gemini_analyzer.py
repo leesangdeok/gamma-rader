@@ -1,23 +1,21 @@
 import logging
 import os
 
-import google.generativeai as genai
-
 logger = logging.getLogger(__name__)
 
-_model = None
+_client = None
 
 
-def get_model():
-    """Gemini 모델 인스턴스를 반환합니다."""
-    global _model
-    if _model is None:
+def _get_client():
+    global _client
+    if _client is None:
+        from google import genai
+
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
-        genai.configure(api_key=api_key)
-        _model = genai.GenerativeModel("gemini-3-flash-preview") # gemini-2.0-flash-exp
-    return _model
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 def analyze_stock_movement(
@@ -36,7 +34,7 @@ def analyze_stock_movement(
         str: 2-3문장 분석 텍스트
     """
     try:
-        model = get_model()
+        client = _get_client()
 
         direction = "급등" if change_pct > 0 else "급락"
         news_headlines = "\n".join(
@@ -58,7 +56,10 @@ def analyze_stock_movement(
 - 명확한 사실에 기반한 분석을 제공하세요
 - 2-3문장으로 간결하게 작성하세요"""
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         return response.text.strip()
     except Exception as e:
         logger.error(f"Gemini 주가 분석 실패 ({name}): {e}")
@@ -78,7 +79,7 @@ def generate_market_summary(time_label: str, indices: dict, news_items: list) ->
         str: 2-3문장 시황 요약 텍스트
     """
     try:
-        model = get_model()
+        client = _get_client()
 
         index_summary = []
         for name, data in indices.items():
@@ -110,7 +111,10 @@ def generate_market_summary(time_label: str, indices: dict, news_items: list) ->
 - 투자자가 주목해야 할 포인트
 - 2-3문장으로 간결하게 한국어로 작성"""
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         return response.text.strip()
     except Exception as e:
         logger.error(f"Gemini 시황 요약 생성 실패: {e}")

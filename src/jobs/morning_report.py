@@ -1,4 +1,6 @@
 import logging
+import os
+import re
 import sys
 from datetime import datetime
 
@@ -28,6 +30,7 @@ def format_morning_report(settings: dict) -> str:
     """오전 시황 브리핑 메시지를 포맷합니다."""
     from src.collectors.market_data import (
         get_foreign_investor_net_selling,
+        get_kospi_night_futures,
         get_kr_10y_yield,
         get_us_10y_yield,
         get_usd_krw,
@@ -40,6 +43,7 @@ def format_morning_report(settings: dict) -> str:
 
     thresholds = settings.get("thresholds", {})
     vix_warning = thresholds.get("vix_warning", 25.0)
+    us_yield_warning = thresholds.get("us_yield_warning", 4.6)
     yield_spread_warning = thresholds.get("yield_spread_warning", 1.5)
     foreign_selling_warning_trillion = thresholds.get(
         "foreign_selling_warning_trillion", 1.0
@@ -51,11 +55,36 @@ def format_morning_report(settings: dict) -> str:
         "",
     ]
 
+    # KOSPI 야간 선물
+    night_futures = get_kospi_night_futures()
+    lines.append("🌙 <b>KOSPI 야간 선물</b>")
+    price = night_futures.get("price")
+    change = night_futures.get("change")
+    change_pct = night_futures.get("change_pct")
+    if price is not None and change is not None and change_pct is not None:
+        icon = "🟢" if change >= 0 else "🔴"
+        sign = "+" if change >= 0 else ""
+        lines.append(f"  {price:,.2f}  {icon} {sign}{change:,.2f} ({sign}{change_pct:.2f}%)")
+    elif price is not None:
+        lines.append(f"  {price:,.2f}")
+    else:
+        lines.append("  N/A")
+    lines.append("")
+
     # USD/KRW 환율
     usd_krw = get_usd_krw()
     lines.append("💱 <b>환율 (USD/KRW)</b>")
-    if usd_krw is not None:
-        lines.append(f"  {usd_krw:,.1f}원")
+    rate = usd_krw.get("rate")
+    krw_change = usd_krw.get("change")
+    krw_change_pct = usd_krw.get("change_pct")
+    if rate is not None:
+        if krw_change is not None and krw_change_pct is not None:
+            # 환율 상승(원화 약세) = 🔴, 하락(원화 강세) = 🟢
+            icon = "🔴" if krw_change > 0 else "🟢"
+            sign = "+" if krw_change >= 0 else ""
+            lines.append(f"  {rate:,.1f}원  {icon} {sign}{krw_change:,.1f} ({sign}{krw_change_pct:.2f}%)")
+        else:
+            lines.append(f"  {rate:,.1f}원")
     else:
         lines.append("  N/A")
     lines.append("")
@@ -101,7 +130,10 @@ def format_morning_report(settings: dict) -> str:
     lines.append("📈 <b>국채 금리 스프레드</b>")
 
     if us_yield is not None:
-        lines.append(f"  미국 10년물: {us_yield:.3f}%")
+        if us_yield >= us_yield_warning:
+            lines.append(f"  ⚠️ 미국 10년물: {us_yield:.3f}% (경고: {us_yield_warning:.1f}% 이상)")
+        else:
+            lines.append(f"  미국 10년물: {us_yield:.3f}%")
     else:
         lines.append("  미국 10년물: N/A")
 
@@ -124,16 +156,26 @@ def format_morning_report(settings: dict) -> str:
     return "\n".join(lines)
 
 
+def _is_telegram_enabled() -> bool:
+    return os.environ.get("TELEGRAM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+
+
 def main():
     """오전 시황 브리핑을 생성하고 Telegram으로 전송합니다."""
-    from src.notifiers.telegram_notifier import send_message
-
     logger.info("오전 시황 브리핑 시작")
 
     settings = load_settings()
     message = format_morning_report(settings)
+    logger.info("브리핑 메시지 생성 완료")
 
-    logger.info("브리핑 메시지 생성 완료, Telegram 전송 중...")
+    if not _is_telegram_enabled():
+        plain = re.sub(r"<[^>]+>", "", message)
+        print("\n" + plain)
+        return
+
+    from src.notifiers.telegram_notifier import send_message
+
+    logger.info("Telegram 전송 중...")
     success = send_message(message)
 
     if success:
